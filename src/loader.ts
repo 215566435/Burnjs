@@ -2,7 +2,7 @@ import * as KoaRouter from 'koa-router';
 import * as fs from 'fs';
 import logger from './logger';
 import { BaseContext } from 'koa';
-import * as Koa from 'koa';
+import { Burn } from './core';
 
 export class Loader {
     private controller: {
@@ -15,9 +15,9 @@ export class Loader {
 
     private hasLoad: boolean = false;
 
-    private app: Koa;
+    private app: Burn;
 
-    constructor(app: Koa) {
+    constructor(app: Burn) {
         this.app = app;
     }
 
@@ -51,8 +51,8 @@ export class Loader {
             const controller = require(ctl);
             const names = Object.getOwnPropertyNames(controller.prototype);
 
-            logger.blue(controller.name);
-            this.controller[controller.name] = this.convertController(controller, names);
+            logger.blue(ctl);
+            this.controller[controller.name.toLowerCase()] = this.convertController(controller, names);
         })
     }
 
@@ -97,7 +97,7 @@ export class Loader {
     }
 
     loadConfig() {
-        const configUrl = this.appDir() + 'app/config.js';
+        const configUrl = this.appDir() + (process.env.NODE_ENV === 'production' ? 'app/config.pro.js' : 'app/config.dev.js');
         const conf = require(configUrl);
 
         Object.defineProperty(this.app, 'config', {

@@ -1,10 +1,9 @@
 const { Controller } = require('../../dist/core');
 
-class base extends Controller {
+class User extends Controller {
     index() {
         this.ctx.body = 'asd'
         this.ctx.service.user.index();
-        console.log(this.app.config);
     }
     parse() {
 
@@ -12,4 +11,4 @@ class base extends Controller {
 
 }
 
-module.exports = base;
+module.exports = User;

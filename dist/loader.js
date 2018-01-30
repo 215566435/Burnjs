@@ -37,8 +37,8 @@ class Loader {
         controllers.forEach((ctl) => {
             const controller = require(ctl);
             const names = Object.getOwnPropertyNames(controller.prototype);
-            logger_1.default.blue(controller.name);
-            this.controller[controller.name] = this.convertController(controller, names);
+            logger_1.default.blue(ctl);
+            this.controller[controller.name.toLowerCase()] = this.convertController(controller, names);
         });
     }
     loadRouter() {
@@ -77,7 +77,7 @@ class Loader {
         // logger.blue(this.service.user);
     }
     loadConfig() {
-        const configUrl = this.appDir() + 'app/config.js';
+        const configUrl = this.appDir() + (process.env.NODE_ENV === 'production' ? 'app/config.pro.js' : 'app/config.dev.js');
         const conf = require(configUrl);
         Object.defineProperty(this.app, 'config', {
             get: () => {

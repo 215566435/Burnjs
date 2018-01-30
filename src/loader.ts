@@ -1,7 +1,8 @@
 import * as KoaRouter from 'koa-router';
 import * as fs from 'fs';
 import logger from './logger';
-import { Context } from 'koa';
+import { BaseContext } from 'koa';
+import * as Koa from 'koa';
 
 export class Loader {
     private controller: {
@@ -13,6 +14,12 @@ export class Loader {
     private koaRouter: any = new KoaRouter;
 
     private hasLoad: boolean = false;
+
+    private app: Koa;
+
+    constructor(app: Koa) {
+        this.app = app;
+    }
 
     private appDir() {
         return __dirname.substr(0, __dirname.length - 4);
@@ -57,30 +64,42 @@ export class Loader {
 
         Object.keys(routing).forEach((key) => {
             const [method, url] = key.split(' ');
+            logger.blue(method + url)
             const d = routing[key];
-            this.koaRouter[method](url, async (ctx: Context) => {
+            this.koaRouter[method](url, async (ctx: BaseContext) => {
                 ctx.service = this.service;
                 const instance = new d.class(ctx);
                 await instance[d.funcName]();
             })
         })
 
-        return this.koaRouter.routes()
+        this.app.use(this.koaRouter.routes())
     }
 
-    loadService(ctx: Context) {
-        if (!this.hasLoad) {
-            this.hasLoad = true;
-            const service = this.fileLoader('app/service');
-            service.forEach((svr) => {
-                const sv = require(svr);
-                Object.defineProperty(this.service, sv.name, {
-                    get: () => {
-                        return new sv(ctx);
-                    }
+    loadService() {
+        this.app.use(async (ctx, next) => {
+            if (!this.hasLoad) {
+                this.hasLoad = true;
+                const service = this.fileLoader('app/service');
+                service.forEach((svr) => {
+                    const sv = require(svr);
+                    Object.defineProperty(this.service, sv.name, {
+                        get: () => {
+                            return new sv(ctx);
+                        }
+                    })
                 })
-            })
-        }
+            }
+        })
+
         // logger.blue(this.service.user);
+    }
+
+    load() {
+        this.loadController();
+
+        this.loadService();
+
+        this.loadRouter();//依赖loadController
     }
 }

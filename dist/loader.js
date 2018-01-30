@@ -4,11 +4,12 @@ const KoaRouter = require("koa-router");
 const fs = require("fs");
 const logger_1 = require("./logger");
 class Loader {
-    constructor() {
+    constructor(app) {
         this.controller = {};
         this.service = {};
         this.koaRouter = new KoaRouter;
         this.hasLoad = false;
+        this.app = app;
     }
     appDir() {
         return __dirname.substr(0, __dirname.length - 4);
@@ -47,6 +48,7 @@ class Loader {
         });
         Object.keys(routing).forEach((key) => {
             const [method, url] = key.split(' ');
+            logger_1.default.blue(method + url);
             const d = routing[key];
             this.koaRouter[method](url, async (ctx) => {
                 ctx.service = this.service;
@@ -54,22 +56,29 @@ class Loader {
                 await instance[d.funcName]();
             });
         });
-        return this.koaRouter.routes();
+        this.app.use(this.koaRouter.routes());
     }
-    loadService(ctx) {
-        if (!this.hasLoad) {
-            this.hasLoad = true;
-            const service = this.fileLoader('app/service');
-            service.forEach((svr) => {
-                const sv = require(svr);
-                Object.defineProperty(this.service, sv.name, {
-                    get: () => {
-                        return new sv(ctx);
-                    }
+    loadService() {
+        this.app.use(async (ctx, next) => {
+            if (!this.hasLoad) {
+                this.hasLoad = true;
+                const service = this.fileLoader('app/service');
+                service.forEach((svr) => {
+                    const sv = require(svr);
+                    Object.defineProperty(this.service, sv.name, {
+                        get: () => {
+                            return new sv(ctx);
+                        }
+                    });
                 });
-            });
-        }
+            }
+        });
         // logger.blue(this.service.user);
+    }
+    load() {
+        this.loadController();
+        this.loadService();
+        this.loadRouter(); //依赖loadController
     }
 }
 exports.Loader = Loader;

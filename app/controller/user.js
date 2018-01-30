@@ -5,7 +5,7 @@ class base extends Controller {
         this.ctx.body = 'asd'
         this.ctx.service.user.index();
 
-        console.log(this.ctx.params)
+        console.log(this.ctx.shit)
     }
     parse() {
 

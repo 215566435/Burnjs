@@ -37,7 +37,7 @@ class Loader {
         controllers.forEach((ctl) => {
             const controller = require(ctl);
             const names = Object.getOwnPropertyNames(controller.prototype);
-            logger_1.default.blue(names);
+            logger_1.default.blue(controller.name);
             this.controller[controller.name] = this.convertController(controller, names);
         });
     }
@@ -52,7 +52,7 @@ class Loader {
             const d = routing[key];
             this.koaRouter[method](url, async (ctx) => {
                 ctx.service = this.service;
-                const instance = new d.class(ctx);
+                const instance = new d.class(ctx, this.app);
                 await instance[d.funcName]();
             });
         });
@@ -67,17 +67,28 @@ class Loader {
                     const sv = require(svr);
                     Object.defineProperty(this.service, sv.name, {
                         get: () => {
-                            return new sv(ctx);
+                            return new sv(ctx, this.app);
                         }
                     });
                 });
             }
+            await next();
         });
         // logger.blue(this.service.user);
+    }
+    loadConfig() {
+        const configUrl = this.appDir() + 'app/config.js';
+        const conf = require(configUrl);
+        Object.defineProperty(this.app, 'config', {
+            get: () => {
+                return conf;
+            }
+        });
     }
     load() {
         this.loadController();
         this.loadService();
+        this.loadConfig();
         this.loadRouter(); //依赖loadController
     }
 }

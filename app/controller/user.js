@@ -1,11 +1,10 @@
-const { Controller } = require('../../dist/app');
+const { Controller } = require('../../dist/core');
 
 class base extends Controller {
     index() {
         this.ctx.body = 'asd'
         this.ctx.service.user.index();
-
-        console.log(this.ctx.shit)
+        console.log(this.app.config);
     }
     parse() {
 

@@ -6,7 +6,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "tsc && NODE_ENV=development node ./dist/app.js ",
-    "dev": "./node_modules/nodemon/bin/nodemon.js"
+    "dev": "./node_modules/nodemon/bin/nodemon.js",
+    "tree": "tree -I '*svn|*node_module*'"
   },
   "author": "ZhengFang",
   "license": "MIT",

@@ -3,12 +3,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const KoaRouter = require("koa-router");
 const fs = require("fs");
 const logger_1 = require("./logger");
+const HASLOADED = Symbol('hasloaded');
 class Loader {
     constructor(app) {
         this.controller = {};
-        this.service = {};
         this.koaRouter = new KoaRouter;
-        this.hasLoad = false;
         this.app = app;
     }
     appDir() {
@@ -54,7 +53,6 @@ class Loader {
             logger_1.default.blue(method + url);
             const d = routing[key];
             this.koaRouter[method](url, async (ctx) => {
-                ctx.service = this.service;
                 const instance = new d.class(ctx, this.app);
                 await instance[d.funcName]();
             });
@@ -62,25 +60,30 @@ class Loader {
         this.app.use(this.koaRouter.routes());
     }
     loadService() {
-        this.app.use(async (ctx, next) => {
-            if (!this.hasLoad) {
-                this.hasLoad = true;
-                const service = this.fileLoader('app/service');
-                service.forEach((mod) => {
-                    Object.defineProperty(this.service, mod.module.name, {
-                        get: () => {
-                            return new mod.module(ctx, this.app);
-                        }
+        const service = this.fileLoader('app/service');
+        var thatApp = this.app;
+        Object.defineProperty(this.app.context, 'service', {
+            get() {
+                if (!this[HASLOADED]) {
+                    this[HASLOADED] = {};
+                }
+                const loaded = this[HASLOADED];
+                if (!loaded.service) {
+                    loaded['service'] = {};
+                    service.forEach((mod) => {
+                        loaded['service'][mod.module.name] = new mod.module(this, thatApp);
                     });
-                });
+                    return loaded.service;
+                }
+                return loaded.service;
             }
-            await next();
         });
-        // logger.blue(this.service.user);
     }
     loadMiddleware() {
         const middleware = this.fileLoader('app/middleware');
         const registedMid = this.app.config['middleware'];
+        if (!registedMid)
+            return; //如果中间件不存在
         registedMid.forEach((name) => {
             logger_1.default.blue(name);
             for (const index in middleware) {
@@ -93,12 +96,15 @@ class Loader {
         });
     }
     loadConfig() {
-        const configUrl = this.appDir()
-            + (process.env.NODE_ENV === 'production' ? 'app/config.pro.js' : 'app/config.dev.js');
-        const conf = require(configUrl);
+        const configDef = this.appDir() + 'app/config/config.default.js';
+        const configEnv = this.appDir()
+            + (process.env.NODE_ENV === 'production' ? 'app/config/config.pro.js' : 'app/config/config.dev.js');
+        const conf = require(configEnv);
+        const confDef = require(configDef);
+        const merge = Object.assign({}, conf, confDef);
         Object.defineProperty(this.app, 'config', {
             get: () => {
-                return conf;
+                return merge;
             }
         });
     }

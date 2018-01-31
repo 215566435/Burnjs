@@ -4,6 +4,8 @@ import { BaseContext } from 'koa';
 import { Loader } from './loader';
 import logger from './logger';
 
+
+var Scount = 0;
 export interface KV {
     [key: string]: any
 }
@@ -19,8 +21,12 @@ export class Controller {
 
 export class Service {
     ctx: BaseContext;
-    app: Koa
+    app: Koa;
+    count: number;
     constructor(ctx: BaseContext, app: Koa) {
+        this.count = Scount;
+        Scount++;
+
         this.ctx = ctx;
         this.app = app;
     }

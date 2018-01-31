@@ -5,6 +5,8 @@ import { BaseContext } from 'koa';
 import { Burn, KV } from './core';
 
 
+const HASLOADED = Symbol('hasloaded')
+
 interface FileModule {
     module: any,
     filename: string
@@ -12,9 +14,7 @@ interface FileModule {
 
 export class Loader {
     private controller: KV = {};
-    private service: KV = {};
     private koaRouter: any = new KoaRouter;
-    private hasLoad: boolean = false;
     private app: Burn;
 
 
@@ -70,7 +70,6 @@ export class Loader {
             logger.blue(method + url)
             const d = routing[key];
             this.koaRouter[method](url, async (ctx: BaseContext) => {
-                ctx.service = this.service;
                 const instance = new d.class(ctx, this.app);
                 await instance[d.funcName]();
             })
@@ -80,31 +79,34 @@ export class Loader {
     }
 
     loadService() {
-        this.app.use(async (ctx, next) => {
-            if (!this.hasLoad) {
-                this.hasLoad = true;
-                const service = this.fileLoader('app/service');
-                service.forEach((mod) => {
-                    Object.defineProperty(this.service, mod.module.name, {
-                        get: () => {
-                            return new mod.module(ctx, this.app);
-                        }
+        const service = this.fileLoader('app/service');
+        var thatApp = this.app;
+        Object.defineProperty(this.app.context, 'service', {
+            get() {
+                if (!(<any>this)[HASLOADED]) {
+                    (<any>this)[HASLOADED] = {};
+                }
+                const loaded = (<any>this)[HASLOADED];
+                if (!loaded.service) {
+                    loaded['service'] = {};
+                    service.forEach((mod) => {
+                        loaded['service'][mod.module.name] = new mod.module(this, thatApp);
                     })
-                })
+                    return loaded.service
+                }
+                return loaded.service;
             }
-            await next();
         })
-
-        // logger.blue(this.service.user);
     }
 
     loadMiddleware() {
         const middleware = this.fileLoader('app/middleware');
         const registedMid = this.app.config['middleware'];
 
+        if (!registedMid) return;//如果中间件不存在
+
         registedMid.forEach((name: string) => {
             logger.blue(name);
-
             for (const index in middleware) {
                 const mod = middleware[index];
                 const fname = mod.filename.split('.')[0];
@@ -116,14 +118,20 @@ export class Loader {
     }
 
     loadConfig() {
-        const configUrl = this.appDir()
-            + (process.env.NODE_ENV === 'production' ? 'app/config.pro.js' : 'app/config.dev.js');
+        const configDef = this.appDir() + 'app/config/config.default.js';
 
-        const conf = require(configUrl);
+        const configEnv = this.appDir()
+            + (process.env.NODE_ENV === 'production' ? 'app/config/config.pro.js' : 'app/config/config.dev.js');
+
+        const conf = require(configEnv);
+        const confDef = require(configDef);
+
+        const merge = Object.assign({}, conf, confDef);
+
 
         Object.defineProperty(this.app, 'config', {
             get: () => {
-                return conf
+                return merge
             }
         })
     }

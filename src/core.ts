@@ -48,6 +48,7 @@ export class Burn extends Koa {
     }
 
     run() {
+
         this.loader.load();
         this.listen(this.port, this.ip, () => {
             logger.green(`Burn服务器运行在:${this.ip}:${this.port}`)

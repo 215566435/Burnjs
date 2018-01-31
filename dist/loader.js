@@ -59,25 +59,27 @@ class Loader {
         });
         this.app.use(this.koaRouter.routes());
     }
-    loadService() {
-        const service = this.fileLoader('app/service');
-        var thatApp = this.app;
-        Object.defineProperty(this.app.context, 'service', {
+    loadToContext(target, app, property) {
+        Object.defineProperty(app.context, property, {
             get() {
                 if (!this[HASLOADED]) {
                     this[HASLOADED] = {};
                 }
                 const loaded = this[HASLOADED];
-                if (!loaded.service) {
-                    loaded['service'] = {};
-                    service.forEach((mod) => {
-                        loaded['service'][mod.module.name] = new mod.module(this, thatApp);
+                if (!loaded[property]) {
+                    loaded[property] = {};
+                    target.forEach((mod) => {
+                        loaded[property][mod.module.name] = new mod.module(this, app);
                     });
                     return loaded.service;
                 }
                 return loaded.service;
             }
         });
+    }
+    loadService() {
+        const service = this.fileLoader('app/service');
+        this.loadToContext(service, this.app, 'service');
     }
     loadMiddleware() {
         const middleware = this.fileLoader('app/middleware');

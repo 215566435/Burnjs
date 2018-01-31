@@ -73,30 +73,33 @@ export class Loader {
                 const instance = new d.class(ctx, this.app);
                 await instance[d.funcName]();
             })
-        })
-
-        this.app.use(this.koaRouter.routes())
+        });
+        this.app.use(this.koaRouter.routes());
     }
 
-    loadService() {
-        const service = this.fileLoader('app/service');
-        var thatApp = this.app;
-        Object.defineProperty(this.app.context, 'service', {
+    loadToContext(target: Array<FileModule>, app: Burn, property: string) {
+        Object.defineProperty(app.context, property, {
             get() {
                 if (!(<any>this)[HASLOADED]) {
                     (<any>this)[HASLOADED] = {};
                 }
                 const loaded = (<any>this)[HASLOADED];
-                if (!loaded.service) {
-                    loaded['service'] = {};
-                    service.forEach((mod) => {
-                        loaded['service'][mod.module.name] = new mod.module(this, thatApp);
+                if (!loaded[property]) {
+                    loaded[property] = {};
+                    target.forEach((mod) => {
+                        loaded[property][mod.module.name] = new mod.module(this, app);
                     })
                     return loaded.service
                 }
                 return loaded.service;
             }
         })
+    }
+
+
+    loadService() {
+        const service = this.fileLoader('app/service');
+        this.loadToContext(service, this.app, 'service');
     }
 
     loadMiddleware() {
@@ -119,16 +122,11 @@ export class Loader {
 
     loadConfig() {
         const configDef = this.appDir() + 'app/config/config.default.js';
-
         const configEnv = this.appDir()
             + (process.env.NODE_ENV === 'production' ? 'app/config/config.pro.js' : 'app/config/config.dev.js');
-
         const conf = require(configEnv);
         const confDef = require(configDef);
-
         const merge = Object.assign({}, conf, confDef);
-
-
         Object.defineProperty(this.app, 'config', {
             get: () => {
                 return merge

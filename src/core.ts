@@ -4,11 +4,13 @@ import { BaseContext } from 'koa';
 import { Loader } from './loader';
 import logger from './logger';
 
+export interface KV {
+    [key: string]: any
+}
 
 export class Controller {
     ctx: BaseContext;
-    app: Koa
-
+    app: Koa;
     constructor(ctx: BaseContext, app: Koa) {
         this.ctx = ctx;
         this.app = app;
@@ -30,6 +32,8 @@ export class Burn extends Koa {
     private port: number;
     private ip: string;
 
+    config: KV = {};
+
     constructor() {
         super();
         this.loader = new Loader(this);
@@ -39,7 +43,6 @@ export class Burn extends Koa {
 
     run() {
         this.loader.load();
-
         this.listen(this.port, this.ip, () => {
             logger.green(`Burn服务器运行在:${this.ip}:${this.port}`)
         })

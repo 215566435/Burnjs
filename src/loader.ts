@@ -2,20 +2,21 @@ import * as KoaRouter from 'koa-router';
 import * as fs from 'fs';
 import logger from './logger';
 import { BaseContext } from 'koa';
-import { Burn } from './core';
+import { Burn, KV } from './core';
+
+
+interface FileModule {
+    module: any,
+    filename: string
+}
 
 export class Loader {
-    private controller: {
-        [key: string]: any
-    } = {};
-    private service: {
-        [key: string]: any
-    } = {};
+    private controller: KV = {};
+    private service: KV = {};
     private koaRouter: any = new KoaRouter;
-
     private hasLoad: boolean = false;
-
     private app: Burn;
+
 
     constructor(app: Burn) {
         this.app = app;
@@ -25,11 +26,14 @@ export class Loader {
         return __dirname.substr(0, __dirname.length - 4);
     }
 
-    private fileLoader(url: string) {
+    private fileLoader(url: string): Array<FileModule> {
         const merge = this.appDir() + url;
 
         return fs.readdirSync(merge).map((name) => {
-            return merge + '/' + name;
+            return {
+                module: require(merge + '/' + name),
+                filename: name
+            };
         });
     }
     private convertController(ctler: object, funcNames: Array<string>) {
@@ -47,12 +51,11 @@ export class Loader {
 
     loadController() {
         const controllers = this.fileLoader('app/controller');
-        controllers.forEach((ctl) => {
-            const controller = require(ctl);
-            const names = Object.getOwnPropertyNames(controller.prototype);
-
-            logger.blue(ctl);
-            this.controller[controller.name.toLowerCase()] = this.convertController(controller, names);
+        controllers.forEach((mod) => {
+            const names = Object.getOwnPropertyNames(mod.module.prototype);
+            Object.defineProperty(this.controller, mod.module.name.toLowerCase(), {
+                value: this.convertController(mod.module, names)
+            })
         })
     }
 
@@ -81,11 +84,10 @@ export class Loader {
             if (!this.hasLoad) {
                 this.hasLoad = true;
                 const service = this.fileLoader('app/service');
-                service.forEach((svr) => {
-                    const sv = require(svr);
-                    Object.defineProperty(this.service, sv.name, {
+                service.forEach((mod) => {
+                    Object.defineProperty(this.service, mod.module.name, {
                         get: () => {
-                            return new sv(ctx, this.app);
+                            return new mod.module(ctx, this.app);
                         }
                     })
                 })
@@ -96,8 +98,27 @@ export class Loader {
         // logger.blue(this.service.user);
     }
 
+    loadMiddleware() {
+        const middleware = this.fileLoader('app/middleware');
+        const registedMid = this.app.config['middleware'];
+
+        registedMid.forEach((name: string) => {
+            logger.blue(name);
+
+            for (const index in middleware) {
+                const mod = middleware[index];
+                const fname = mod.filename.split('.')[0];
+                if (name === fname) {
+                    this.app.use(mod.module());
+                }
+            }
+        })
+    }
+
     loadConfig() {
-        const configUrl = this.appDir() + (process.env.NODE_ENV === 'production' ? 'app/config.pro.js' : 'app/config.dev.js');
+        const configUrl = this.appDir()
+            + (process.env.NODE_ENV === 'production' ? 'app/config.pro.js' : 'app/config.dev.js');
+
         const conf = require(configUrl);
 
         Object.defineProperty(this.app, 'config', {
@@ -111,6 +132,7 @@ export class Loader {
         this.loadController();
         this.loadService();
         this.loadConfig();
-        this.loadRouter();//依赖loadController
+        this.loadMiddleware();
+        this.loadRouter();//依赖loadController 
     }
 }

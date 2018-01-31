@@ -20,6 +20,7 @@ exports.Service = Service;
 class Burn extends Koa {
     constructor() {
         super();
+        this.config = {};
         this.loader = new loader_1.Loader(this);
         this.port = 3000;
         this.ip = '127.0.0.1';

@@ -3,23 +3,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const Koa = require("koa");
 const loader_1 = require("./loader");
 const logger_1 = require("./logger");
-var Scount = 0;
-class Controller {
-    constructor(ctx, app) {
-        this.ctx = ctx;
-        this.app = app;
-    }
-}
-exports.Controller = Controller;
-class Service {
-    constructor(ctx, app) {
-        this.count = Scount;
-        Scount++;
-        this.ctx = ctx;
-        this.app = app;
-    }
-}
-exports.Service = Service;
 class Burn extends Koa {
     constructor() {
         super();

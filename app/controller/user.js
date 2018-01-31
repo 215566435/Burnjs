@@ -1,11 +1,8 @@
-const { Controller } = require('../../dist/core');
+const { Controller } = require('../../dist/base/controller');
 
 class User extends Controller {
     index() {
-        this.ctx.body = 'asd';
-
-        this.ctx.service.user.index(this.ctx);
-        this.ctx.service.user.count;
+        this.ctx.body = this.ctx.service.user.index();
     }
     parse() {
 

@@ -1,38 +1,10 @@
 import * as Koa from 'koa';
-
-import { BaseContext } from 'koa';
 import { Loader } from './loader';
 import logger from './logger';
 
-
-var Scount = 0;
 export interface KV {
     [key: string]: any
 }
-
-export class Controller {
-    ctx: BaseContext;
-    app: Koa;
-    constructor(ctx: BaseContext, app: Koa) {
-        this.ctx = ctx;
-        this.app = app;
-    }
-}
-
-export class Service {
-    ctx: BaseContext;
-    app: Koa;
-    count: number;
-    constructor(ctx: BaseContext, app: Koa) {
-        this.count = Scount;
-        Scount++;
-
-        this.ctx = ctx;
-        this.app = app;
-    }
-}
-
-
 export class Burn extends Koa {
     private loader: Loader;
     private port: number;

@@ -1,13 +1,9 @@
-const { Service } = require('../../dist/core');
+const { Service } = require('../../dist/base/service');
 
 
 class user extends Service {
-    index(ctx) {
-        const a = 2 + 3;
-        // if (ctx == this.ctx) {
-        //     console.log('相同');
-        // }
-
+    index() {
+        return 2 + 3;
     }
 }
 

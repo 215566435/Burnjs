@@ -3,9 +3,31 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const fs = require("fs");
 const Router = require("koa-router");
 class Loader {
-    constructor() {
+    constructor(app) {
         this.router = new Router;
         this.controller = {};
+        this.app = app;
+    }
+    loadService() {
+        const service = fs.readdirSync(__dirname + '/service');
+        Object.defineProperty(this.app.context, 'service', {
+            get() {
+                if (!this['cache']) {
+                    this['cache'] = {};
+                }
+                const loaded = this['cache'];
+                if (!loaded['service']) {
+                    loaded['service'] = {};
+                    service.forEach((d) => {
+                        const name = d.split('.')[0];
+                        const mod = require(__dirname + '/service/' + d);
+                        loaded['service'][name] = new mod(this);
+                    });
+                    return loaded.service;
+                }
+                return loaded.service;
+            }
+        });
     }
     loadController() {
         const dirs = fs.readdirSync(__dirname + '/controller');
@@ -35,6 +57,7 @@ class Loader {
     }
     loadRouter() {
         this.loadController();
+        this.loadService();
         const mod = require(__dirname + '/router.js');
         const routers = mod(this.controller);
         console.log(routers);

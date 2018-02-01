@@ -10,6 +10,7 @@ class Loader {
     }
     loadService() {
         const service = fs.readdirSync(__dirname + '/service');
+        var that = this;
         Object.defineProperty(this.app.context, 'service', {
             get() {
                 if (!this['cache']) {
@@ -21,7 +22,7 @@ class Loader {
                     service.forEach((d) => {
                         const name = d.split('.')[0];
                         const mod = require(__dirname + '/service/' + d);
-                        loaded['service'][name] = new mod(this);
+                        loaded['service'][name] = new mod(this, that.app);
                     });
                     return loaded.service;
                 }
@@ -55,9 +56,22 @@ class Loader {
             }
         });
     }
+    loadConfig() {
+        const configDef = __dirname + '/config/config.default.js';
+        const configEnv = __dirname + (process.env.NODE_ENV === 'production' ? '/config/config.pro.js' : '/config/config.dev.js');
+        const conf = require(configEnv);
+        const confDef = require(configDef);
+        const merge = Object.assign({}, conf, confDef);
+        Object.defineProperty(this.app, 'config', {
+            get: () => {
+                return merge;
+            }
+        });
+    }
     loadRouter() {
         this.loadController();
         this.loadService();
+        this.loadConfig();
         const mod = require(__dirname + '/router.js');
         const routers = mod(this.controller);
         console.log(routers);
@@ -66,7 +80,7 @@ class Loader {
             this.router[method](path, async (ctx) => {
                 const _class = routers[key].type;
                 const handler = routers[key].methodName;
-                const instance = new _class(ctx);
+                const instance = new _class(ctx, this.app);
                 instance[handler]();
             });
         });
